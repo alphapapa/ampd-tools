@@ -6,6 +6,7 @@
 import argparse
 from collections import defaultdict
 import logging
+import os
 import random
 import re
 import sys
@@ -24,22 +25,38 @@ DEFAULT_PORT = 6600
 FILE_PREFIX_RE = re.compile('^file: ')
 
 # ** Classes
+class Track(object):
+    def __init__(self, duration=None, title=None, path=None):
+	self.duration = int(duration)
+	self.title = title
+	self.path = path
+
+    # These two are the magic that makes sets work
+    def __eq__(self, other):
+        return self.path == other.path
+
+    def __hash__(self):
+        return hash(self.path)
+
+    def __str__(self):
+        return os.path.basename(self.path)
+
 class Playlist(list):
     def __init__(self, *args, **kwargs):
         super(Playlist, self).__init__(args)
-        self.duration = sum([int(track['time']) for track in args]) if args else 0
+        self.duration = sum([track.duration for track in args]) if args else 0
 
     def append(self, item):
         super(Playlist, self).append(item)
 
         # TODO: Is there a more Pythonic way to do this?
-        self.duration += sum([int(track['time']) for track in item]) if isinstance(item, list) or isinstance(item, set) else int(item['time'])
+        self.duration += sum([track.duration for track in item]) if isinstance(item, list) or isinstance(item, set) else item.duration
 
     def extend(self, item):
         super(Playlist, self).extend(item)
 
         # TODO: Is there a more Pythonic way to do this?
-        self.duration += sum([int(track['time']) for track in item]) if isinstance(item, list) or isinstance(item, set) else int(item['time'])
+
         
 class MyFloat(float):
     '''Rounds and pads to 3 decimal places when printing.  Also overrides
@@ -338,9 +355,15 @@ def main():
     parser.add_argument('-l', '--length', help="Desired length of queue in minutes")
     parser.add_argument('-d', '--daemon', default='localhost', dest='host',
                         help='Name or address of server, optionally with port in HOST:PORT format.  Default: localhost:6600')
-    parser.add_argument('-g', '--genre')
+    parser.add_argument('-A', '--any', nargs='*')
+    parser.add_argument('-a', '--artist', nargs='*')
+    parser.add_argument('-b', '--album', nargs='*')
+    parser.add_argument('-t', '--title', nargs='*')
+    parser.add_argument('-g', '--genre', nargs='*')
     parser.add_argument("-v", "--verbose", action="count", dest="verbose", help="Be verbose, up to -vvv")
     args = parser.parse_args()
+
+    queries = ['any', 'artist', 'album', 'title', 'genre']
     
     # Setup logging
     log = logging.getLogger('trim-mpd-queue')
@@ -377,8 +400,14 @@ def main():
     log.debug("Args: %s", args)
 
     # Check args
-    if not args.genre:
-        log.error("Please give a genre.")
+    found = False
+    for q in queries:
+        if getattr(args, q):
+            found = True
+            break
+
+    if not found:
+        log.error("Please give a query.")
         return False
 
     # Connect to the master server
@@ -393,23 +422,45 @@ def main():
         log.debug('Connected to master server.')
 
     # Find songs
-    pool = Playlist(*daemon.search('genre', args.genre))
+    pools = []
 
-    if not pool:
-        log.error('No songs found.')
-        return False
+    for queryType in queries:
+        if getattr(args, queryType):
+            for query in getattr(args, queryType):
+                pools.append(Playlist(*[Track(duration=track['time'], path=track['file'].replace('file: ', ''))
+                                        for track in daemon.search(queryType, query)]))
 
     # Check result
-    if not pool:
-        log.error("No tracks remaining to use.")
+    found = False
+    for pool in pools:
+        if pool:
+            found = True
+            break
+
+    if not found:
+        log.error("No tracks found for queries.")
         return False
 
-    log.debug("Pool: %s tracks, %s seconds" % (len(pool), pool.duration))
-        
-    # Build new playlist
-    originalPool = Playlist(*pool)
+    log.debug("Pool: %s tracks, %s seconds" % (
+        sum(map(len, pools)),
+        sum([track.duration
+             for pool in pools
+             for track in pool
+             if track.duration > 0])))
+
+    # Build new playlist without dupes
+
+    # Test the track duration. I found one track that had a very
+    # strange duration, a huge negative number, and it messed up the
+    # script and caused an infinite loop.
+    originalPool = Playlist(*set([Track(duration=track.duration, path=track.path)
+                                 for pool in pools
+                                 for track in pool
+                                 if track.duration > 0]))
     newPlaylist = Playlist()
-    numInputTracks = len(pool)
+    numInputTracks = len(originalPool)
+
+    pool = Playlist(*originalPool)
 
     # *** Using length
     if args.length:
@@ -430,8 +481,10 @@ def main():
             remainingTime = args.length - newPlaylist.duration
 
             # Isn't there some way to do this in the while condition in Python?
-            tracksThatFit = [track for track in pool if int(track['time']) < remainingTime]  # Can I/should I use a set comprehension instead of a listcomp?
-
+            tracksThatFit = [Track(duration=track.duration, path=track.path)
+                             for track in pool
+                             if int(track.duration) < remainingTime]
+            
             log.debug("Tracks that fit in remaining time of %s seconds: %s" % (remainingTime, len(tracksThatFit)))
             
             # Are we there yet?
@@ -489,7 +542,7 @@ def main():
     daemon.clear()
     daemon.command_list_ok_begin()
     for track in newPlaylist:
-        daemon.add(track['file'].replace('file: ', ''))
+        daemon.add(track.path)
 
     daemon.command_list_end()
 
