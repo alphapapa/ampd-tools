@@ -4,14 +4,11 @@
 
 # ** Imports
 import argparse
-from collections import defaultdict
 import logging
 import os
 import random
 import re
 import sys
-from threading import Thread
-import time
 
 import mpd  # Using python-mpd2
 
