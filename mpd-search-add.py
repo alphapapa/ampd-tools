@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# * mpd-findadd-duration.py
+# * mpd-search-add.py
 
 # ** Imports
 import argparse
