@@ -177,7 +177,7 @@ class Client(mpd.MPDClient):
 
 def main():
 
-    # Parse args
+    # *** Parse args
     parser = argparse.ArgumentParser(
             description='Trims an MPD queue to a desired length')
     parser.add_argument('-l', '--length', help="Desired length of queue in minutes")
@@ -193,7 +193,7 @@ def main():
 
     queries = ['any', 'artist', 'album', 'title', 'genre']
     
-    # Setup logging
+    # *** Setup logging
     log = logging.getLogger('trim-mpd-queue')
     if args.verbose >= 3:
         # Debug everything, including MPD module.  This sets the root
@@ -290,6 +290,7 @@ def main():
 
     pool = Playlist(*originalPool)
 
+
     # *** Using length
     if args.length:
 
@@ -361,13 +362,14 @@ def main():
 
 
     else:
-        # No length; use all tracks            
+        # *** No length; use all tracks            
         newPlaylist = Playlist(*pool)
 
         # TODO: Shuffle it since it doesn't get created randomly
         
-    # Add tracks to mpd
+    # *** Add tracks to mpd
     daemon.clear()
+    
     daemon.command_list_ok_begin()
     for track in newPlaylist:
         daemon.add(track.path)
