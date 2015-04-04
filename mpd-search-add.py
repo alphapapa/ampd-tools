@@ -180,7 +180,10 @@ def main():
     # *** Parse args
     parser = argparse.ArgumentParser(
             description='Search for tracks in an MPD library and add them to its playlist')
-    parser.add_argument('-l', '--length', help="Desired length of queue in minutes")
+
+    # TODO: parse any number, with or without 'm' or 'h' at the end,
+    # as length in minutes or hours
+    parser.add_argument('-l', '--length', help="Desired length of queue in minutes", metavar="minutes")
     parser.add_argument('-d', '--daemon', default='localhost', dest='host',
                         help='Name or address of server, optionally with port in HOST:PORT format.  Default: localhost:6600')
 
