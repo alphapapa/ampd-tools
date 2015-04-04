@@ -1,0 +1,46 @@
+* ampd-tools
+This is a small collection of MPD-related Python scripts that you might find handy.
+** mpd-search-add.py
+This script searches an MPD server's library for tracks and adds them to its playlist.  You can optionally specify a length in minutes, and it will make the playlist's duration as close to it as possible without going over.
+*** Usage
+#+BEGIN_SRC
+usage: mpd-search-add [-h] [-d MINUTES] [-s HOST] [-A [ANY [ANY ...]]]
+                      [-a [ARTIST [ARTIST ...]]] [-b [ALBUM [ALBUM ...]]]
+                      [-t [TITLE [TITLE ...]]] [-g [GENRE [GENRE ...]]] [-v]
+
+Search for tracks in an MPD library and add them to its playlist
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d MINUTES, --duration MINUTES
+                        Desired duration of queue in minutes
+  -s HOST, --server HOST
+                        Name or address of server, optionally with port in
+                        HOST:PORT format. Default: localhost:6600
+  -A [ANY [ANY ...]], --any [ANY [ANY ...]]
+  -a [ARTIST [ARTIST ...]], --artists [ARTIST [ARTIST ...]]
+  -b [ALBUM [ALBUM ...]], --albums [ALBUM [ALBUM ...]]
+  -t [TITLE [TITLE ...]], --titles [TITLE [TITLE ...]]
+  -g [GENRE [GENRE ...]], --genres [GENRE [GENRE ...]]
+  -v, --verbose         Be verbose, up to -vvv
+#+END_SRC
+** trim-mpd-playlist.py
+This script will trim an existing MPD playlist to a certain duration.
+*** Usage
+#+BEGIN_SRC
+usage: trim-mpd-playlist.py [-h] [-s HOST] [-v] duration
+
+Trims an MPD queue to a desired duration
+
+positional arguments:
+  duration              Desired duration of queue in minutes
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -s HOST, --server HOST
+                        Name or address of server, optionally with port in
+                        HOST:PORT format. Default: localhost:6600
+  -v, --verbose         Be verbose, up to -vvv
+#+END_SRC
+** License
+Everything is under the GPLv2.
