@@ -183,16 +183,19 @@ def main():
     parser.add_argument('-l', '--length', help="Desired length of queue in minutes")
     parser.add_argument('-d', '--daemon', default='localhost', dest='host',
                         help='Name or address of server, optionally with port in HOST:PORT format.  Default: localhost:6600')
+
+    # TODO: Use action='append' and flatten resulting lists
     parser.add_argument('-A', '--any', nargs='*')
-    parser.add_argument('-a', '--artist', nargs='*')
-    parser.add_argument('-b', '--album', nargs='*')
-    parser.add_argument('-t', '--title', nargs='*')
-    parser.add_argument('-g', '--genre', nargs='*')
+    parser.add_argument('-a', '--artists', nargs='*')
+    parser.add_argument('-b', '--albums', nargs='*')
+    parser.add_argument('-t', '--titles', nargs='*')
+    parser.add_argument('-g', '--genres', nargs='*')
+
     parser.add_argument("-v", "--verbose", action="count", dest="verbose", help="Be verbose, up to -vvv")
     args = parser.parse_args()
 
     queries = ['any', 'artist', 'album', 'title', 'genre']
-    
+
     # *** Setup logging
     log = logging.getLogger('trim-mpd-queue')
     if args.verbose >= 3:
