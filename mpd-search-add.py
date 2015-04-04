@@ -179,7 +179,7 @@ def main():
 
     # *** Parse args
     parser = argparse.ArgumentParser(
-            description='Trims an MPD queue to a desired length')
+            description='Search for tracks in an MPD library and add them to its playlist')
     parser.add_argument('-l', '--length', help="Desired length of queue in minutes")
     parser.add_argument('-d', '--daemon', default='localhost', dest='host',
                         help='Name or address of server, optionally with port in HOST:PORT format.  Default: localhost:6600')
