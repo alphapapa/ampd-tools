@@ -54,7 +54,7 @@ class Playlist(list):
 
         # TODO: Is there a more Pythonic way to do this?
 
-        
+
 class Client(mpd.MPDClient):
     '''Subclasses mpd.MPDClient, keeping state data, reconnecting as
     needed, etc.'''
@@ -306,7 +306,7 @@ def main():
 
         else:
             allowDuplicates = False
-            log.debug('Not allowing duplicate tracks in output')        
+            log.debug('Not allowing duplicate tracks in output')
 
         tries = 1
         while True:
@@ -316,9 +316,9 @@ def main():
             tracksThatFit = [Track(duration=track.duration, path=track.path)
                              for track in pool
                              if int(track.duration) < remainingTime]
-            
+
             log.debug("Tracks that fit in remaining time of %s seconds: %s" % (remainingTime, len(tracksThatFit)))
-            
+
             # Are we there yet?
             if not tracksThatFit:
                 log.debug("No tracks remaining that fit in remaining time of %s seconds" % (remainingTime))
@@ -338,7 +338,7 @@ def main():
                         break
 
                     log.debug("Not within 30 seconds of desired playlist length.  Trying again...")
-                    
+
                     if not allowDuplicates:
                         pool = Playlist()
                         pool.extend(originalPool)
@@ -365,14 +365,14 @@ def main():
 
 
     else:
-        # *** No length; use all tracks            
+        # *** No length; use all tracks
         newPlaylist = Playlist(*pool)
 
         # TODO: Shuffle it since it doesn't get created randomly
-        
+
     # *** Add tracks to mpd
     daemon.clear()
-    
+
     daemon.command_list_ok_begin()
     for track in newPlaylist:
         daemon.add(track.path)
@@ -392,6 +392,6 @@ def main():
 
     return True
 
-    
+
 if __name__ == '__main__':
     sys.exit(main())
