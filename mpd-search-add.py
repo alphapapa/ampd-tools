@@ -230,7 +230,7 @@ def main():
     log.debug('Using python-mpd version: %s', str(mpd.VERSION))
     log.debug("Args: %s", args)
 
-    # Check args
+    # *** Check args
     found = False
     for q in queries:
         if getattr(args, q):
@@ -241,7 +241,7 @@ def main():
         log.error("Please give a query.")
         return False
 
-    # Connect to the master server
+    # *** Connect to the master server
     daemon = Client(host=args.host, port=DEFAULT_PORT, logger=log)
 
     try:
@@ -252,7 +252,7 @@ def main():
     else:
         log.debug('Connected to master server.')
 
-    # Find songs
+    # *** Find songs
     pools = []
 
     for queryType in queries:
