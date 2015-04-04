@@ -183,16 +183,16 @@ def main():
 
     # TODO: parse any number, with or without 'm' or 'h' at the end,
     # as length in minutes or hours
-    parser.add_argument('-l', '--length', help="Desired length of queue in minutes", metavar="minutes")
-    parser.add_argument('-d', '--daemon', default='localhost', dest='host',
+    parser.add_argument('-d', '--duration', help="Desired duration of queue in minutes", metavar="MINUTES")
+    parser.add_argument('-s', '--server', default='localhost', dest='host',
                         help='Name or address of server, optionally with port in HOST:PORT format.  Default: localhost:6600')
 
     # TODO: Use action='append' and flatten resulting lists
     parser.add_argument('-A', '--any', nargs='*')
-    parser.add_argument('-a', '--artists', nargs='*')
-    parser.add_argument('-b', '--albums', nargs='*')
-    parser.add_argument('-t', '--titles', nargs='*')
-    parser.add_argument('-g', '--genres', nargs='*')
+    parser.add_argument('-a', '--artists', dest='artist', nargs='*')
+    parser.add_argument('-b', '--albums', dest='album', nargs='*')
+    parser.add_argument('-t', '--titles', dest='title', nargs='*')
+    parser.add_argument('-g', '--genres', dest='genre', nargs='*')
 
     parser.add_argument("-v", "--verbose", action="count", dest="verbose", help="Be verbose, up to -vvv")
     args = parser.parse_args()
@@ -297,14 +297,14 @@ def main():
     pool = Playlist(*originalPool)
 
 
-    # *** Using length
-    if args.length:
+    # *** Using duration
+    if args.duration:
 
-        args.length = int(args.length) * 60  # Convert length to seconds
+        args.duration = int(args.duration) * 60  # Convert duration to seconds
 
-        if pool.duration < (args.length - 30):  # If the pool is shorter than the desired duration, it will be necessary to repeat some tracks
+        if pool.duration < (args.duration - 30):  # If the pool is shorter than the desired duration, it will be necessary to repeat some tracks
             allowDuplicates = True
-            log.debug('Track pool duration (%s seconds) shorter than desired length (%s seconds); will allow duplicate tracks in output' % (pool.duration, args.length))
+            log.debug('Track pool duration (%s seconds) shorter than desired duration (%s seconds); will allow duplicate tracks in output' % (pool.duration, args.duration))
             newPlaylist = Playlist(*pool)  # Start with all the tracks
 
         else:
@@ -313,7 +313,7 @@ def main():
 
         tries = 1
         while True:
-            remainingTime = args.length - newPlaylist.duration
+            remainingTime = args.duration - newPlaylist.duration
 
             # Isn't there some way to do this in the while condition in Python?
             tracksThatFit = [Track(duration=track.duration, path=track.path)
@@ -327,20 +327,20 @@ def main():
                 log.debug("No tracks remaining that fit in remaining time of %s seconds" % (remainingTime))
 
                 # If not within 30 seconds of desired time, start over
-                if (args.length - newPlaylist.duration > 30):
+                if (args.duration - newPlaylist.duration > 30):
 
                     # TODO: Increase margin gradually. This will help
                     # prevent situations where, e.g. the desired
-                    # length is 25 minutes, but the closest it can get
+                    # duration is 25 minutes, but the closest it can get
                     # is 24 minutes, and after the 10 tries, it
                     # happens to go with one that's only 21 minutes
                     # long instead of 24.
                     if tries == len(originalPool):
-                        log.warning("Tried %s times to make a playlist within 30 seconds of the desired length; gave up and made one %s seconds long."
+                        log.warning("Tried %s times to make a playlist within 30 seconds of the desired duration; gave up and made one %s seconds long."
                                     % (tries, newPlaylist.duration))
                         break
 
-                    log.debug("Not within 30 seconds of desired playlist length.  Trying again...")
+                    log.debug("Not within 30 seconds of desired playlist duration.  Trying again...")
 
                     if not allowDuplicates:
                         pool = Playlist()
@@ -368,7 +368,7 @@ def main():
 
 
     else:
-        # *** No length; use all tracks
+        # *** No duration; use all tracks
         newPlaylist = Playlist(*pool)
 
         # TODO: Shuffle it since it doesn't get created randomly
@@ -384,8 +384,8 @@ def main():
 
     daemon.play()
 
-    if args.length:
-        log.info("New playlist duration: %i of %s desired seconds" % (newPlaylist.duration, args.length))
+    if args.duration:
+        log.info("New playlist duration: %i of %s desired seconds" % (newPlaylist.duration, args.duration))
         log.info("Used %i (%i%%) of %i tracks" % ( len(newPlaylist), (round(len(newPlaylist) / numInputTracks, 2)) * 100, numInputTracks))
     else:
         hours = newPlaylist.duration // 3600
