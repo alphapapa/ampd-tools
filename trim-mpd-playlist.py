@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# * trim-mpd-queue.py
+# * trim-mpd-playlist.py
 
 # ** Imports
 import argparse
@@ -9,7 +9,6 @@ import logging
 import random
 import re
 import sys
-from threading import Thread
 import time
 
 import mpd  # Using python-mpd2
@@ -440,15 +439,15 @@ def main():
 
     # Parse args
     parser = argparse.ArgumentParser(
-            description='Trims an MPD queue to a desired duration')
-    parser.add_argument(dest='duration', help="Desired duration of queue in minutes")
-    parser.add_argument('-d', '--daemon', default='localhost', dest='host',
+            description='Trims an MPD playlist to a desired duration')
+    parser.add_argument(dest='duration', help="Desired duration of playlist in minutes")
+    parser.add_argument('-s', '--server', default='localhost', dest='host',
                         help='Name or address of server, optionally with port in HOST:PORT format.  Default: localhost:6600')
     parser.add_argument("-v", "--verbose", action="count", dest="verbose", help="Be verbose, up to -vvv")
     args = parser.parse_args()
-    
+
     # Setup logging
-    log = logging.getLogger('trim-mpd-queue')
+    log = logging.getLogger('trim-mpd-playlist')
     if args.verbose >= 3:
         # Debug everything, including MPD module.  This sets the root
         # logger, which python-mpd2 uses.  Too bad it doesn't use a
@@ -483,14 +482,14 @@ def main():
 
     # Check args
     if not args.duration:
-        log.error("How long a queue do you want?")
+        log.error("How long a playlist do you want?")
         return False
 
     # Convert to seconds
     args.duration = int(args.duration) * 60
 
     log.debug("Desired duration: %s seconds", args.duration)
-    
+
     # Connect to the master server
     daemon = Client(host=args.host, port=DEFAULT_PORT, logger=log)
 
@@ -502,7 +501,7 @@ def main():
     else:
         log.debug('Connected to master server.')
 
-    # Get queue
+    # Get playlist
     originalPlaylist = daemon.playlistinfo()
 
     # Calculate length
@@ -510,7 +509,7 @@ def main():
     for song in originalPlaylist:
         originalDuration += int(song['time'])
 
-    log.debug("Current queue duration: %s", originalDuration)
+    log.debug("Current playlist duration: %s", originalDuration)
 
     # Reduce if needed
     tries = 0
@@ -532,7 +531,7 @@ def main():
             if tries > 20:
                 log.error("Tried 5 times but playlist was too short.")
                 return False
-            
+
             duration = originalDuration
             deleteSongs = []
             playlist = list(originalPlaylist)
@@ -542,7 +541,7 @@ def main():
             log.debug("Deleting song: %s", song['file'])
             daemon.deleteid(song['id'])
 
-    log.info('New duration: %s seconds', duration)                
-        
+    log.info('New duration: %s seconds', duration)
+
 if __name__ == '__main__':
     sys.exit(main())
