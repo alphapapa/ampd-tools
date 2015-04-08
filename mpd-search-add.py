@@ -194,6 +194,9 @@ def main():
     parser.add_argument('-t', '--titles', dest='title', nargs='*')
     parser.add_argument('-g', '--genres', dest='genre', nargs='*')
 
+    parser.add_argument('-p', '--print-filenames',
+                        dest='printFilenames', action="store_true")
+
     parser.add_argument("-v", "--verbose", action="count", dest="verbose", help="Be verbose, up to -vvv")
     args = parser.parse_args()
 
@@ -373,25 +376,33 @@ def main():
 
         # TODO: Shuffle it since it doesn't get created randomly
 
-    # *** Add tracks to mpd
-    daemon.clear()
+    # *** Add tracks to mpd or print
+    if args.printFilenames:
+        # Just print filenames to STDOUT
+        print "\n".join([track.path for track in newPlaylist])
 
-    daemon.command_list_ok_begin()
-    for track in newPlaylist:
-        daemon.add(track.path)
-
-    daemon.command_list_end()
-
-    daemon.play()
-
-    if args.duration:
-        log.info("New playlist duration: %i of %s desired seconds" % (newPlaylist.duration, args.duration))
-        log.info("Used %i (%i%%) of %i tracks" % ( len(newPlaylist), (round(len(newPlaylist) / numInputTracks, 2)) * 100, numInputTracks))
     else:
-        hours = newPlaylist.duration // 3600
-        minutes = newPlaylist.duration // 60 % 60
-        seconds = newPlaylist.duration % 60 % 60
-        log.info("New playlist: %s tracks, %ih:%im:%is" % (numInputTracks, hours, minutes, seconds))
+        # Add tracks to MPD
+        daemon.clear()
+
+        daemon.command_list_ok_begin()
+        for track in newPlaylist:
+            daemon.add(track.path)
+
+        daemon.command_list_end()
+
+        daemon.play()
+
+        # TODO: Send these to STDERR so they can be used with -p
+        # without interfering
+        if args.duration:
+            log.info("New playlist duration: %i of %s desired seconds" % (newPlaylist.duration, args.duration))
+            log.info("Used %i (%i%%) of %i tracks" % ( len(newPlaylist), (round(len(newPlaylist) / numInputTracks, 2)) * 100, numInputTracks))
+        else:
+            hours = newPlaylist.duration // 3600
+            minutes = newPlaylist.duration // 60 % 60
+            seconds = newPlaylist.duration % 60 % 60
+            log.info("New playlist: %s tracks, %ih:%im:%is" % (numInputTracks, hours, minutes, seconds))
 
     return True
 
