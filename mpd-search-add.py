@@ -21,12 +21,15 @@ if mpd.VERSION < (0, 5, 4):
 DEFAULT_PORT = 6600
 FILE_PREFIX_RE = re.compile('^file: ')
 
+
 # ** Classes
+
+
 class Track(object):
     def __init__(self, duration=None, title=None, path=None):
-	self.duration = int(duration)
-	self.title = title
-	self.path = path
+        self.duration = int(duration)
+        self.title = title
+        self.path = path
 
     # These two are the magic that makes sets work
     def __eq__(self, other):
@@ -38,6 +41,7 @@ class Track(object):
     def __str__(self):
         return os.path.basename(self.path)
 
+
 class Playlist(list):
     def __init__(self, *args, **kwargs):
         super(Playlist, self).__init__(args)
@@ -47,7 +51,10 @@ class Playlist(list):
         super(Playlist, self).append(item)
 
         # TODO: Is there a more Pythonic way to do this?
-        self.duration += sum([track.duration for track in item]) if isinstance(item, list) or isinstance(item, set) else item.duration
+        self.duration += (sum([track.duration for track in item])
+                          if isinstance(item, list)
+                          or isinstance(item, set)
+                          else item.duration)
 
     def extend(self, item):
         super(Playlist, self).extend(item)
@@ -173,19 +180,23 @@ class Client(mpd.MPDClient):
         self.elapsed = elapsed
         super(Client, self).seek(self.song, self.elapsed)
 
+
 # ** Functions
 
 def main():
 
     # *** Parse args
     parser = argparse.ArgumentParser(
-            description='Search for tracks in an MPD library and add them to its playlist')
+        description='Search for tracks in an MPD library and'
+        'add them to its playlist')
 
     # TODO: parse any number, with or without 'm' or 'h' at the end,
     # as length in minutes or hours
-    parser.add_argument('-d', '--duration', help="Desired duration of queue in minutes", metavar="MINUTES")
+    parser.add_argument('-d', '--duration', metavar="MINUTES",
+                        help="Desired duration of queue in minutes")
     parser.add_argument('-s', '--server', default='localhost', dest='host',
-                        help='Name or address of server, optionally with port in HOST:PORT format.  Default: localhost:6600')
+                        help='Name or address of server, optionally with'
+                        'port in HOST:PORT format.  Default: localhost:6600')
 
     # TODO: Use action='append' and flatten resulting lists
     parser.add_argument('-A', '--any', nargs='*')
@@ -197,7 +208,8 @@ def main():
     parser.add_argument('-p', '--print-filenames',
                         dest='printFilenames', action="store_true")
 
-    parser.add_argument("-v", "--verbose", action="count", dest="verbose", help="Be verbose, up to -vvv")
+    parser.add_argument("-v", "--verbose", action="count", dest="verbose",
+                        help="Be verbose, up to -vvv")
     args = parser.parse_args()
 
     queries = ['any', 'artist', 'album', 'title', 'genre']
@@ -210,7 +222,8 @@ def main():
         # logging.NullHandler to make this cleaner.  See
         # https://docs.python.org/2/howto/logging.html#library-config
         LOG_LEVEL = logging.DEBUG
-        logging.basicConfig(level=LOG_LEVEL, format="%(levelname)s: %(name)s: %(message)s")
+        logging.basicConfig(level=LOG_LEVEL,
+                            format="%(levelname)s: %(name)s: %(message)s")
 
     else:
         # Don't debug MPD.  Don't set the root logger.  Do manually
@@ -229,7 +242,8 @@ def main():
             LOG_LEVEL = logging.WARNING
 
         handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter("%(levelname)s: %(name)s: %(message)s"))
+        handler.setFormatter(
+            logging.Formatter("%(levelname)s: %(name)s: %(message)s"))
         log.addHandler(handler)
         log.setLevel(LOG_LEVEL)
 
@@ -264,8 +278,10 @@ def main():
     for queryType in queries:
         if getattr(args, queryType):
             for query in getattr(args, queryType):
-                pools.append(Playlist(*[Track(duration=track['time'], path=track['file'].replace('file: ', ''))
-                                        for track in daemon.search(queryType, query)]))
+                pools.append(Playlist(
+                    *[Track(duration=track['time'],  # Unpack listcomp of Tracks
+                            path=track['file'].replace('file: ', ''))  # Trim file string
+                      for track in daemon.search(queryType, query)]))
 
     # Check result
     if not any(pools):
@@ -284,24 +300,30 @@ def main():
     # Test the track duration. I found one track that had a very
     # strange duration, a huge negative number, and it messed up the
     # script and caused an infinite loop.
-    originalPool = Playlist(*set([Track(duration=track.duration, path=track.path)
-                                 for pool in pools
-                                 for track in pool
-                                 if track.duration > 0]))
+    originalPool = Playlist(
+        *set([Track(duration=track.duration,  # Unpack the set
+                    path=track.path)
+              for pool in pools
+              for track in pool
+              if track.duration > 0]))
     newPlaylist = Playlist()
     numInputTracks = len(originalPool)
 
     pool = Playlist(*originalPool)
 
-
     # *** Using duration
     if args.duration:
 
-        args.duration = int(args.duration) * 60  # Convert duration to seconds
+        # Convert duration from minutes to seconds
+        args.duration = int(args.duration) * 60
 
-        if pool.duration < (args.duration - 30):  # If the pool is shorter than the desired duration, it will be necessary to repeat some tracks
+        if pool.duration < (args.duration - 30):
+            # If the pool is shorter than the desired duration, it
+            # will be necessary to repeat some tracks
             allowDuplicates = True
-            log.debug('Track pool duration (%s seconds) shorter than desired duration (%s seconds); will allow duplicate tracks in output' % (pool.duration, args.duration))
+            log.debug('Track pool duration (%s seconds) shorter than desired duration (%s seconds);'
+                      'will allow duplicate tracks in output',
+                      pool.duration, args.duration)
             newPlaylist = Playlist(*pool)  # Start with all the tracks
 
         else:
@@ -317,14 +339,16 @@ def main():
                              for track in pool
                              if int(track.duration) < remainingTime]
 
-            log.debug("Tracks that fit in remaining time of %s seconds: %s" % (remainingTime, len(tracksThatFit)))
+            log.debug("Tracks that fit in remaining time of %s seconds: %s",
+                      remainingTime, len(tracksThatFit))
 
             # Are we there yet?
             if not tracksThatFit:
-                log.debug("No tracks remaining that fit in remaining time of %s seconds" % (remainingTime))
+                log.debug("No tracks remaining that fit in remaining time of %s seconds",
+                          remainingTime)
 
-                # If not within 30 seconds of desired time, start over
                 if (args.duration - newPlaylist.duration > 30):
+                    # If not within 30 seconds of desired time, start over
 
                     # TODO: Increase margin gradually. This will help
                     # prevent situations where, e.g. the desired
@@ -333,8 +357,9 @@ def main():
                     # happens to go with one that's only 21 minutes
                     # long instead of 24.
                     if tries == len(originalPool):
-                        log.warning("Tried %s times to make a playlist within 30 seconds of the desired duration; gave up and made one %s seconds long."
-                                    % (tries, newPlaylist.duration))
+                        log.warning("Tried %s times to make a playlist within 30 seconds"
+                                    "of the desired duration; gave up and made one %s seconds long.",
+                                    tries, newPlaylist.duration)
                         break
 
                     log.debug("Not within 30 seconds of desired playlist duration.  Trying again...")
@@ -363,7 +388,6 @@ def main():
                 if not allowDuplicates:
                     pool.remove(newTrack)
 
-
     else:
         # *** No duration; use all tracks
         newPlaylist = Playlist(*pool)
@@ -390,13 +414,18 @@ def main():
         # TODO: Send these to STDERR so they can be used with -p
         # without interfering
         if args.duration:
-            log.info("New playlist duration: %i of %s desired seconds" % (newPlaylist.duration, args.duration))
-            log.info("Used %i (%i%%) of %i tracks" % ( len(newPlaylist), (round(len(newPlaylist) / numInputTracks, 2)) * 100, numInputTracks))
+            log.info("New playlist duration: %i of %s desired seconds",
+                     newPlaylist.duration, args.duration)
+            log.info("Used %i (%i%%) of %i tracks",
+                     len(newPlaylist),
+                     (round(len(newPlaylist) / numInputTracks, 2)) * 100,
+                     numInputTracks)
         else:
             hours = newPlaylist.duration // 3600
             minutes = newPlaylist.duration // 60 % 60
             seconds = newPlaylist.duration % 60 % 60
-            log.info("New playlist: %s tracks, %ih:%im:%is" % (numInputTracks, hours, minutes, seconds))
+            log.info("New playlist: %s tracks, %ih:%im:%is",
+                     numInputTracks, hours, minutes, seconds)
 
     return True
 
