@@ -268,13 +268,7 @@ def main():
                                         for track in daemon.search(queryType, query)]))
 
     # Check result
-    found = False
-    for pool in pools:
-        if pool:
-            found = True
-            break
-
-    if not found:
+    if not any(pools):
         log.error("No tracks found for queries.")
         return False
 
